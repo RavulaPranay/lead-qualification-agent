@@ -1,0 +1,270 @@
+{
+  "name": "chat bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2f2c27d3-0100-43ba-bbb1-210fcbacd2d5",
+      "name": "Telegram Trigger",
+      "webhookId": "c2bc69c8-e8e2-4def-94e4-2be7ed673752",
+      "credentials": {
+        "telegramApi": {
+          "id": "Z78WWIDk43SkcEYP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "= {{ $json.message.text }}",
+        "options": {
+          "systemMessage": " You are a Lead Qualification and Outreach Agent for [NexaCloud Solutions]. Your job is to evaluate incoming leads and decide the right next action — you do not just answer questions, you take actions using your tools.\n\nYou have four tools available:\n1. knowledge_base_search — searches our ICP criteria and past won/lost deal examples. ALWAYS use this first to check how similar leads were scored before.\n2. web_search — searches the internet for public information about the lead's company or role. Use this to verify company size, industry, and legitimacy.\n3. send_email — sends an email. Only use this if the lead is qualified (score 7 or higher).\n4. notify_lead_via_telegram — sends a reply back to the person in the same Telegram chat they messaged from. ALWAYS use this at the end, regardless of score, to let them know their inquiry was received and what happens next.\n\nFor every new lead, follow this process:\n\nSTEP 1 — Understand the lead\nRead the lead's name, company, role, and message/inquiry from the input.\n\nSTEP 2 — Check against knowledge base\nCall knowledge_base_search with a query describing the lead's company/role/need. Compare against our ICP criteria and similar past leads.\n\nSTEP 3 — Research the company\nCall web_search to find the company's size, industry, and any recent news. Use this to fill gaps the lead didn't mention.\n\nSTEP 4 — Score the lead\nGive a score from 1-10 based on:\n- Company size fit (matches our ICP range)\n- Budget signal\n- Role seniority (decision-maker vs. non-decision-maker)\n- Industry fit\n- Urgency/intent signals in their message\n\nSTEP 5 — Decide and act\n- If score is 7 or higher: draft a short, personalized outreach email (2-3 sentences, reference something specific about their company, propose a next step) and call send_email to send it.\n- If score is below 7: do NOT send an email. Just record the reason for disqualification.\n\nSTEP 6 — Reply to the lead\nAlways call notify_lead_via_telegram with a brief, friendly confirmation message (e.g. \"Thanks for reaching out — someone from our team will follow up shortly\" for qualified leads, or a polite general acknowledgment for others). Never reveal the internal score to the lead.\n\nSTEP 7 — Report\nEnd your own response (not the Telegram message) with a structured summary in this exact format:\nLead: [name] at [company]\nScore: [X]/10\nReasoning: [2-3 sentences explaining the score]\nAction taken: [Email sent / No action - disqualified]\n\nBe honest and consistent in scoring — do not inflate scores to justify sending emails. If you are missing information needed to score confidently, say so in your reasoning rather than guessing."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "fde7edac-f680-41da-9bf5-e8c241825f13",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        80,
+        208
+      ],
+      "id": "334a49c5-4749-4b0d-9233-3888a4aa8bd4",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "0qciOpOPBe7rNzzV",
+          "name": "Groq account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": " Searches our Ideal Customer Profile (ICP) criteria, pricing tiers, and past won/lost deal examples. Always use this first when evaluating a new lead.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        64
+      ],
+      "id": "4c1591bc-b6b5-4621-bda7-35425d31e13f",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "NL1V0OAvglc1uNX2",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        736,
+        272
+      ],
+      "id": "2462391f-ea25-4661-a894-43b8bb8f23ad",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "NbtDjC4Jc78zd1VJ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        256
+      ],
+      "id": "152a3876-a97b-48e3-9d66-6ab00c6fabf5",
+      "name": "Send a text message in Telegram",
+      "webhookId": "d72d5138-32ba-48a4-8f37-6b038378fb10",
+      "credentials": {
+        "telegramApi": {
+          "id": "Z78WWIDk43SkcEYP",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": " w02699950@gmail.com",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        272
+      ],
+      "id": "8bcf93b4-b751-474b-9093-398efedfb671",
+      "name": "Send a message in Gmail",
+      "webhookId": "8f684e10-174d-414a-9ec8-de4bf7610cd7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CY1XSagLOh4pybHN",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": " Searches the web for public information about a company or person, to verify company size, industry, and legitimacy.",
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"api_key\": \"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\",\n  \"query\": \"{{ $fromAI('query', 'search query about the lead company') }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        272
+      ],
+      "id": "7233298b-c728-43a5-9fec-5b27da14f950",
+      "name": "web_search"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message in Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "web_search": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5fc0a9c3-2f26-4dbd-8622-c7250268db34",
+  "meta": {
+    "instanceId": "541f5818752877663f5880c8c888d70adbc116c39d230314336bab63768b1b22"
+  },
+  "nodeGroups": [],
+  "id": "EUZpHbcA5CBIXpdC",
+  "tags": []
+}
